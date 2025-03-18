@@ -1,0 +1,126 @@
+=== How to Install and Configure Filebeat for Apache2 Logs on Ubuntu 24.04 | Elastic Stack Setup  ===
+
+    Monitoring Apache logs is essential for tracking server health, identifying security threats, and analyzing traffic. This guide covers setting up 
+    the Elastic Stack (Elasticsearch, Kibana, and Filebeat) on Ubuntu 24.04 to collect and visualize Apache logs efficiently.
+
+
+=== Prerequisites  == 
+
+  An Ubuntu 24.04 LTS EC2 instance.
+
+  At least 2 CPU cores and 4GB RAM.
+ 
+  Java and Apache2 installed
+
+==========================================
+
+Step 1: Set Up Ubuntu EC2 Instance
+
+   Update the package list and install required dependencies: 
+
+   sudo apt update && sudo apt install -y openjdk-11-jdk apache2
+   sudo systemctl status apache2
+
+Step 2: Install Elasticsearch:
+
+  Import the GPG key and add the Elasticsearch repository:
+
+   curl -fsSL https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg
+   echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main" | sudo tee /etc/apt/sources.list.d/elastic-8.x.list
+   sudo apt update && sudo apt install -y elasticsearch
+
+== Enable and start Elasticsearch: === 
+
+        sudo systemctl enable --now elasticsearch
+
+=== Modify the configuration for remote access: ===
+
+
+    sudo nano /etc/elasticsearch/elasticsearch.yml
+
+Uncomment and modify: --- 
+
+   network.host: 0.0.0.0
+   xpack.security.enabled: false
+   discovery.seed_hosts: []
+
+Restart Elasticsearch: ---- 
+
+ sudo systemctl restart elasticsearch
+
+====
+Verify it is running: 
+
+  curl -X GET "server_ip:9200"
+
+=====
+
+Step 3: Install Kibana
+
+   sudo apt install -y kibana
+   sudo systemctl enable --now kibana
+
+Modify the Kibana configuration:
+
+   sudo nano /etc/kibana/kibana.yml
+
+Update:==
+
+   server.port: 5601
+   server.host: "0.0.0.0"
+   elasticsearch.hosts: ["http://server_ip:9200"]
+
+Restart Kibana:
+
+  sudo systemctl restart kibana
+
+===
+Access Kibana at http://<your-server-ip>:5601.
+
+----
+
+Step 4: Install Filebeat
+
+Install Filebeat: === 
+
+    sudo apt install -y filebeat
+    sudo filebeat modules enable apache
+
+Configure the Apache module:===
+
+sudo nano /etc/filebeat/modules.d/apache.yml
+
+
+- module: apache
+  access:
+    enabled: true
+    var.paths: ["/var/log/apache2/access.log*"]
+  error:
+    enabled: true
+    var.paths: ["/var/log/apache2/error.log*"]
+
+==
+
+===Test and apply Filebeat setup: ===
+sudo filebeat test config
+sudo filebeat setup
+
+Enable and start Filebeat: === 
+
+   sudo systemctl enable --now filebeat
+
+   sudo systemctl status filebeat
+====================================
+
+Step 5: Verify Apache Logs in Kibana  === 
+
+Open Kibana (http://<your-server-ip>:5601).
+
+Navigate to Observability → Logs.
+
+Ensure Apache logs are visible.
+
+Now, your Apache logs are being collected and visualized in Kibana via Filebeat and Elasticsearch. 🎉
+
+
+===========
